@@ -5,11 +5,11 @@ body {
 	background-image: -o-linear-gradient(top, #00C5D9, #066A9B);
 	background-image: linear-gradient(top, #00C5D9, #066A9B);
 	font-family: 'Patrick Hand', cursive;
-  letter-spacing: 0.25px;
+	letter-spacing: 0.25px;
 	font-size: 21px;
 	margin: 0;
 	padding: 0;
-  height: 100vh;
+	height: 100vh;
 	color: white;
 }
 h1#start-title {
@@ -27,36 +27,12 @@ h2 {
 	border: 4px solid white;
 	position: relative;
 }
-#motion-panel {
-	margin-top: 18px;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 6px;
-}
-#motion-btn {
-	padding: 10px 18px;
-	font-size: 18px;
-	background: transparent;
-	border: 3px solid white;
-	border-radius: 18px;
-	color: white;
-	cursor: pointer;
-}
-#motion-status {
-	font-size: 18px;
-}
-#motion-result {
-	font-size: 18px;
-	line-height: 1.3;
-	max-width: 420px;
-}
 
 #game-container {
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
-  align-items: center;
+	align-items: center;
 	position: absolute;
 	text-align: center;
 	height: 100vh;
@@ -134,7 +110,7 @@ h1 {
 	padding: 20px;
 }
 button#start-btn {
-  margin: 20px 0;
+	margin: 20px 0;
 	padding: 50px;
 	font-size: 18px;
 	background: transparent;
@@ -145,8 +121,8 @@ button#start-btn {
 button#start-btn .arrow {
 	display: block;
 	border-color: transparent white;
-  border-style: solid;
-  border-width: 30px 0px 30px 60px;
+	border-style: solid;
+	border-width: 30px 0px 30px 60px;
 }
 
 .fish {
@@ -154,56 +130,56 @@ button#start-btn .arrow {
 	height: 50px;
 	background-color: #F7A400;
 	transform:rotate(45deg);
-  border-radius: 50%;
+	border-radius: 50%;
 	position: absolute;
 	transition: left 0.1s linear, top 0.1s linear, opacity 1s linear;
 	animation-name: appear;
-  animation-duration: 0.5s;
+	animation-duration: 0.5s;
 }
 .fish:after {
 	content:"";
 	border-color: transparent #F7A400;
-  border-style: solid;
-  border-width: 20px 20px 20px 0px;
-  transform-origin: center left;
-  transform: rotate(-45deg);
-  position: absolute;
-  right: -15%;
-  top: -15%;
+	border-style: solid;
+	border-width: 20px 20px 20px 0px;
+	transform-origin: center left;
+	transform: rotate(-45deg);
+	position: absolute;
+	right: -15%;
+	top: -15%;
 }
 .fish:before,
 .rare-fish:before {
-  content: "";
-  background-color: #FFF;
-  height: 8px;
-  width: 8px;
-  display: block;
-  border-radius: 50%;
-  top: 50%;
-  position: absolute;
-  left: 10%;
+	content: "";
+	background-color: #FFF;
+	height: 8px;
+	width: 8px;
+	display: block;
+	border-radius: 50%;
+	top: 50%;
+	position: absolute;
+	left: 10%;
 }
 .rare-fish {
 	width: 50px;
 	height: 50px;
 	background-color: #B02C90;
 	transform:rotate(45deg);
-  border-radius: 25%;
+	border-radius: 25%;
 	position: absolute;
 	transition: left 0.1s linear, top 0.1s linear, opacity 1s linear;
 	animation-name: appear;
-  animation-duration: 0.5s;
+	animation-duration: 0.5s;
 }
 .rare-fish:after {
 	content:"";
 	border-color: transparent #B02C90;
-  border-style: solid;
-  border-width: 20px 20px 20px 0px;
-  transform-origin: center left;
-  transform: rotate(-45deg);
-  position: absolute;
-  right: -15%;
-  top: -15%;
+	border-style: solid;
+	border-width: 20px 20px 20px 0px;
+	transform-origin: center left;
+	transform: rotate(-45deg);
+	position: absolute;
+	right: -15%;
+	top: -15%;
 }
 .rare-fish:after {
 	border-color: transparent #B02C90;
@@ -212,19 +188,19 @@ button#start-btn .arrow {
 .rare-fish.left{
 	transform: scaleX(-1) rotate(45deg);
 	animation-name: appear;
-  animation-duration: 0.5s;
+	animation-duration: 0.5s;
 }
 .shark.left {
 	transform: scaleX(-1);
 	animation-name: appear;
-  animation-duration: 0.5s;
+	animation-duration: 0.5s;
 }
 
 .fish.caught,
 .rare-fish.caught,
 .trash.caught {
 	animation: pull-up 0.5s;
-  animation-fill-mode: forwards;
+	animation-fill-mode: forwards;
 }
 
 .fish.disappear,
@@ -233,40 +209,40 @@ button#start-btn .arrow {
 .jellyfish.disappear,
 .shark.disappear{
 	animation: disappear 0.35s;
-  animation-fill-mode: forwards;
+	animation-fill-mode: forwards;
 }
 .trash {
-  width: 30px;
-  border-radius:50% 50% 25% 25%;
-  height:40px;
-  background-color: rgba(255,255,255,0.3333);
-  position: absolute;
-  transition: all 1s;
-  transform: rotate(-90deg);
+	width: 30px;
+	border-radius:50% 50% 25% 25%;
+	height:40px;
+	background-color: rgba(255,255,255,0.3333);
+	position: absolute;
+	transition: all 1s;
+	transform: rotate(-90deg);
 	animation-name: float;
 	animation-duration: 1s;
 	animation-timing-function: linear;
 }
 .trash:before {
-  content: "";
-  width: 15px;
-  height: 8px;
-  border-radius: 10%;
-  background-color: #C70437;
-  position:absolute;
-  left: 50%;
-  top: -8px;
-  transform: translateX(-50%);
+	content: "";
+	width: 15px;
+	height: 8px;
+	border-radius: 10%;
+	background-color: #C70437;
+	position:absolute;
+	left: 50%;
+	top: -8px;
+	transform: translateX(-50%);
 
 }
 .trash:after {
-  content: "";
-  width: 30px;
-  height: 50px;
-  border-radius: 25% 25% 30% 30%;
-  background-color: rgba(255,255,255,0.3333);
-  position: absolute;
-  top: 40px;
+	content: "";
+	width: 30px;
+	height: 50px;
+	border-radius: 25% 25% 30% 30%;
+	background-color: rgba(255,255,255,0.3333);
+	position: absolute;
+	top: 40px;
 }
 
 .jellyfish {
@@ -303,74 +279,74 @@ button#start-btn .arrow {
 }
 
 @keyframes appear {
-  from {
-  	opacity: 0;
-  }
-  to {
-  	opacity: 1;
-  }
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
 }
 @keyframes disappear {
-  from {
-  	opacity: 1;
-  }
-  to {
-  	opacity: 0;
-  }
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
 }
 @keyframes float {
-  0% {
-  	opacity: 0;
-  	margin-left: 0px;
-  	margin-top: -20px
-  }
-  25% {
-  	opacity: 0.25;
-  	margin-left: -10px;
-  	margin-top: -15px
-  }
-  50% {
-  	opacity: 0.5;
-  	margin-left: 0px;
-  	margin-top: -10px
-  }
-  75% {
-  	opacity: 0.75;
-  	margin-left: 10px;
-  	margin-top: -5px
-  }
-  100% {
-  	opacity: 1;
-  	margin-left: 0px;
-  	margin-top: 0px;
-  }
+	0% {
+		opacity: 0;
+		margin-left: 0px;
+		margin-top: -20px
+	}
+	25% {
+		opacity: 0.25;
+		margin-left: -10px;
+		margin-top: -15px
+	}
+	50% {
+		opacity: 0.5;
+		margin-left: 0px;
+		margin-top: -10px
+	}
+	75% {
+		opacity: 0.75;
+		margin-left: 10px;
+		margin-top: -5px
+	}
+	100% {
+		opacity: 1;
+		margin-left: 0px;
+		margin-top: 0px;
+	}
 }
 @keyframes floatUp {
-  0% {
-  	opacity: 0;
-  	margin-left: 0px;
-  	margin-top: 20px
-  }
-  25% {
-  	opacity: 0.25;
-  	margin-left: -10px;
-  	margin-top: 15px
-  }
-  50% {
-  	opacity: 0.5;
-  	margin-left: 0px;
-  	margin-top: 10px
-  }
-  75% {
-  	opacity: 0.75;
-  	margin-left: 10px;
-  	margin-top: 5px
-  }
-  100% {
-  	opacity: 1;
-  	margin-left: 0px;
-  	margin-top: 0px;
-  }
+	0% {
+		opacity: 0;
+		margin-left: 0px;
+		margin-top: 20px
+	}
+	25% {
+		opacity: 0.25;
+		margin-left: -10px;
+		margin-top: 15px
+	}
+	50% {
+		opacity: 0.5;
+		margin-left: 0px;
+		margin-top: 10px
+	}
+	75% {
+		opacity: 0.75;
+		margin-left: 10px;
+		margin-top: 5px
+	}
+	100% {
+		opacity: 1;
+		margin-left: 0px;
+		margin-top: 0px;
+	}
 }
 
 @keyframes pull-up {
@@ -397,32 +373,32 @@ button#start-btn .arrow {
 }
 
 #bubbles {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: -1;
-  overflow: hidden;
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	top: 0;
+	left: 0;
+	z-index: -1;
+	overflow: hidden;
 }
 
 #bubbles div {
-  border: solid 2px rgba(255,255,255,0.125);
-  border-radius: 100%;
-  position: absolute;
-  visibility: hidden;
-  animation: fade 10s infinite;
+	border: solid 2px rgba(255,255,255,0.125);
+	border-radius: 100%;
+	position: absolute;
+	visibility: hidden;
+	animation: fade 10s infinite;
 }
 
 @keyframes fade {
-  from {
-    bottom: -24px;
-    opacity: 1;
-    visibility: visible;
-  }
-  to {
-    bottom: 120%;
-  }
+	from {
+		bottom: -24px;
+		opacity: 1;
+		visibility: visible;
+	}
+	to {
+		bottom: 120%;
+	}
 }
 
 #clock {
@@ -441,12 +417,12 @@ svg {
 }
 
 .chart-gauge {
-  font-size: 2.5rem;
-  letter-spacing: 4px;
-  text-anchor: middle;
-  dominant-baseline: central;
+	font-size: 2.5rem;
+	letter-spacing: 4px;
+	text-anchor: middle;
+	dominant-baseline: central;
 	alignment-baseline: middle;
-  stroke-linecap: round;
+	stroke-linecap: round;
 }
 .timer-time {
 	fill: #FFFFFF;
@@ -459,19 +435,19 @@ svg {
 .timer-backdrop {
 	transform: rotate(-90deg);
 	transform-origin: center;
-  fill: none;
-  stroke: rgba(255,255,255,.2);
-  stroke-width: 5;
+	fill: none;
+	stroke: rgba(255,255,255,.2);
+	stroke-width: 5;
 }
 .timer-gauge {
 	transform: rotate(-90deg);
 	transform-origin: center;
-  fill: none;
-  stroke: #FFF;
-  stroke-width: 5;
-  animation-iteration-count: infinite;
-  stroke-dashoffset: 0;
-  stroke-dasharray: 250;
+	fill: none;
+	stroke: #FFF;
+	stroke-width: 5;
+	animation-iteration-count: infinite;
+	stroke-dashoffset: 0;
+	stroke-dasharray: 250;
 	transition: 14s linear;
 }
 .timer-gauge.ticking {
@@ -479,8 +455,8 @@ svg {
 }
 
 @keyframes fill {
-  0%   { stroke-dashoffset: 360; }
-  100% { stroke-dashoffset: 0; }
+	0%   { stroke-dashoffset: 360; }
+	100% { stroke-dashoffset: 0; }
 }
 
 @keyframes shake {

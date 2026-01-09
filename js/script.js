@@ -13,35 +13,10 @@ window.onload = function() {
     const gameTimer = document.querySelector("#game-timer");
     const gameTimerGauge = document.querySelector(".timer-gauge");
     const gameScore = document.querySelector("#game-score");
-    const motionBtn = document.querySelector("#motion-btn");
-    const motionStatus = document.querySelector("#motion-status");
-    const motionResult = document.querySelector("#motion-result");
     var mousePosition = {
         x:0,
         y:0
     }
-    var gameActive = false;
-    var motionEnabled = false;
-    var motionAttached = false;
-    var motionReady = true;
-    var lastMotionAt = 0;
-    var motionCooldownMs = 700;
-    var motionMinAccel = 1.2;
-    var gravity = { x: 0, y: 0, z: 0 };
-    var gravityAlpha = 0.8;
-    var castBands = {
-        small: [0.25, 0.45],
-        medium: [0.45, 0.7],
-        large: [0.7, 0.9]
-    };
-    var motionRecording = false;
-    var motionSampleCount = 0;
-    var motionSampleSums = {
-        ax: 0,
-        ay: 0,
-        az: 0,
-        atotal: 0
-    };
     var gameTimerInterval = null;
     var day = 0;
     var score = 0;
@@ -88,21 +63,14 @@ window.onload = function() {
     //event listeners
     startBtn.addEventListener("click", startGame);
     clickContainer.addEventListener("mousemove", checkCursor);
-    if (motionBtn) {
-        motionBtn.addEventListener("click", toggleMotionRecord);
-    }
 
-    function setLinePosition (clientX, clientY){
+    function checkCursor (event){
         //update cursor co ordinates
-        mousePosition.x = clientX;
-        mousePosition.y = clientY;
+        mousePosition.x = event.clientX;
+        mousePosition.y = event.clientY;
         //set fishing line to follow cursor
         fishingLine.style.left= mousePosition.x+"px";
         fishingLine.style.top = mousePosition.y+"px";
-    }
-
-    function checkCursor (event){
-        setLinePosition(event.clientX, event.clientY);
     }
     //create audio element for playing music and sfx
     function sound(src) {
@@ -120,281 +88,9 @@ window.onload = function() {
         }
     }
 
-    function setMotionStatus (text) {
-        if (motionStatus) {
-            motionStatus.textContent = text;
-        }
-    }
-
-    function setMotionButtonText (text) {
-        if (motionBtn) {
-            motionBtn.textContent = text;
-        }
-    }
-
-    function formatMotionValue (value) {
-        if (!Number.isFinite(value)) {
-            return "-";
-        }
-        return value.toFixed(3);
-    }
-
-    function renderMotionResult (avgAx, avgAy, avgAz, avgTotal, label) {
-        if (!motionResult) {
-            return;
-        }
-        motionResult.textContent = "Avg ax: " + formatMotionValue(avgAx)
-            + " | Avg ay: " + formatMotionValue(avgAy)
-            + " | Avg az: " + formatMotionValue(avgAz)
-            + " | Avg atotal: " + formatMotionValue(avgTotal)
-            + " | Label: " + (label || "-");
-    }
-
-    function resetMotionSamples () {
-        motionSampleCount = 0;
-        motionSampleSums.ax = 0;
-        motionSampleSums.ay = 0;
-        motionSampleSums.az = 0;
-        motionSampleSums.atotal = 0;
-    }
-
-    function handleMotionPermissionDenied () {
-        motionEnabled = false;
-        if (motionRecording) {
-            motionRecording = false;
-            setMotionButtonText("Start recording");
-        }
-        setMotionStatus("Motion permission denied.");
-        renderMotionResult(NaN, NaN, NaN, NaN, "-");
-    }
-
-    function toggleMotionRecord () {
-        if (motionRecording) {
-            stopMotionRecord();
-        }
-        else {
-            startMotionRecord();
-        }
-    }
-
-    function startMotionRecord () {
-        resetMotionSamples();
-        motionRecording = true;
-        setMotionButtonText("Stop recording");
-        setMotionStatus("Recording... tap again to stop.");
-        renderMotionResult(NaN, NaN, NaN, NaN, "-");
-        enableDeviceMotion();
-        if (!motionAttached && typeof DeviceMotionEvent === "undefined") {
-            motionRecording = false;
-            setMotionButtonText("Start recording");
-            setMotionStatus("Device motion not supported.");
-        }
-    }
-
-    function stopMotionRecord () {
-        motionRecording = false;
-        setMotionButtonText("Start recording");
-        if (motionSampleCount === 0) {
-            setMotionStatus("No samples captured.");
-            renderMotionResult(NaN, NaN, NaN, NaN, "-");
-            return;
-        }
-        var avgAx = motionSampleSums.ax / motionSampleCount;
-        var avgAy = motionSampleSums.ay / motionSampleCount;
-        var avgAz = motionSampleSums.az / motionSampleCount;
-        var avgAtotal = motionSampleSums.atotal / motionSampleCount;
-        var label = classifyThrow(avgAx, avgAy, avgAz, avgAtotal);
-        setMotionStatus("Recording stopped.");
-        renderMotionResult(avgAx, avgAy, avgAz, avgAtotal, label);
-    }
-
-    function enableDeviceMotion () {
-        if (motionAttached) {
-            motionEnabled = true;
-            setMotionStatus("Motion ready.");
-            return;
-        }
-        if (typeof DeviceMotionEvent === "undefined") {
-            setMotionStatus("Device motion not supported.");
-            return;
-        }
-        if (typeof DeviceMotionEvent.requestPermission === "function") {
-            setMotionStatus("Requesting motion permission...");
-            DeviceMotionEvent.requestPermission().then(function(result){
-                if (result === "granted") {
-                    attachDeviceMotion();
-                    setMotionStatus("Motion ready.");
-                }
-                else {
-                    handleMotionPermissionDenied();
-                }
-            }).catch(function() {
-                handleMotionPermissionDenied();
-            });
-        }
-        else {
-            attachDeviceMotion();
-            setMotionStatus("Motion ready.");
-        }
-    }
-
-    function attachDeviceMotion () {
-        if (motionAttached) {
-            return;
-        }
-        motionAttached = true;
-        motionEnabled = true;
-        window.addEventListener("devicemotion", handleDeviceMotion);
-    }
-
-    function getLinearAcceleration (event) {
-        var ax = null;
-        var ay = null;
-        var az = null;
-        if (event.acceleration && event.acceleration.x != null) {
-            ax = event.acceleration.x;
-            ay = event.acceleration.y;
-            az = event.acceleration.z;
-        }
-        else if (event.accelerationIncludingGravity && event.accelerationIncludingGravity.x != null) {
-            var rawX = event.accelerationIncludingGravity.x;
-            var rawY = event.accelerationIncludingGravity.y;
-            var rawZ = event.accelerationIncludingGravity.z;
-            gravity.x = gravityAlpha * gravity.x + (1 - gravityAlpha) * rawX;
-            gravity.y = gravityAlpha * gravity.y + (1 - gravityAlpha) * rawY;
-            gravity.z = gravityAlpha * gravity.z + (1 - gravityAlpha) * rawZ;
-            ax = rawX - gravity.x;
-            ay = rawY - gravity.y;
-            az = rawZ - gravity.z;
-        }
-        if (!Number.isFinite(ax) || !Number.isFinite(ay) || !Number.isFinite(az)) {
-            return null;
-        }
-        return { x: ax, y: ay, z: az };
-    }
-
-    function classifyThrow (ax, ay, az, atotalOverride) {
-        var atotal = Number.isFinite(atotalOverride)
-            ? atotalOverride
-            : Math.sqrt(ax * ax + ay * ay + az * az);
-        if (atotal > 4.620) {
-            if (az > 2.704) {
-                return "large";
-            }
-            if (ax > 2.974) {
-                return "large";
-            }
-            if (ay > -5.890) {
-                return "medium";
-            }
-            return "large";
-        }
-        if (ax > -0.009) {
-            if (atotal > 1.250) {
-                if (ax > 1.411) {
-                    return "small";
-                }
-                if (ax > 0.096) {
-                    return "medium";
-                }
-                return "large";
-            }
-            if (atotal > 1.097) {
-                return "medium";
-            }
-            return "small";
-        }
-        return "small";
-    }
-
-    function addMotionSample (accel) {
-        var ax = accel.x;
-        var ay = accel.y;
-        var az = accel.z;
-        var atotal = Math.sqrt(ax * ax + ay * ay + az * az);
-        motionSampleSums.ax += ax;
-        motionSampleSums.ay += ay;
-        motionSampleSums.az += az;
-        motionSampleSums.atotal += atotal;
-        motionSampleCount++;
-    }
-
-    function castRod (strength, ax, ay) {
-        var rect = clickContainer.getBoundingClientRect();
-        var band = castBands[strength] || castBands.medium;
-        var minY = rect.top + rect.height * band[0];
-        var maxY = rect.top + rect.height * band[1];
-        var targetY = minY + Math.random() * (maxY - minY);
-
-        var centerX = rect.left + rect.width / 2;
-        var maxOffset = rect.width * 0.45;
-        var maxAxis = 6;
-        var offsetRatio = 0;
-        if (Number.isFinite(ax)) {
-            var clampedAx = Math.max(-maxAxis, Math.min(maxAxis, ax));
-            offsetRatio = clampedAx / maxAxis;
-        }
-        else {
-            offsetRatio = (Math.random() * 2) - 1;
-        }
-        var targetX = centerX + offsetRatio * maxOffset;
-
-        setLinePosition(targetX, targetY);
-        hitAtPosition(targetX, targetY);
-    }
-
-    function hitAtPosition (clientX, clientY) {
-        var items = clickContainer.querySelectorAll(".item");
-        for (var i = 0; i < items.length; i++) {
-            var rect = items[i].getBoundingClientRect();
-            if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
-                hit.call(items[i], { target: items[i] });
-                break;
-            }
-        }
-    }
-
-    function handleDeviceMotion (event) {
-        if (!motionEnabled) {
-            return;
-        }
-        var accel = getLinearAcceleration(event);
-        if (!accel) {
-            return;
-        }
-        if (motionRecording) {
-            addMotionSample(accel);
-        }
-        if (!gameActive) {
-            return;
-        }
-        var ax = accel.x;
-        var ay = accel.y;
-        var az = accel.z;
-        var atotal = Math.sqrt(ax * ax + ay * ay + az * az);
-
-        if (atotal < motionMinAccel) {
-            motionReady = true;
-            return;
-        }
-        if (!motionReady) {
-            return;
-        }
-        if (Date.now() - lastMotionAt < motionCooldownMs) {
-            return;
-        }
-        motionReady = false;
-        lastMotionAt = Date.now();
-        castRod(classifyThrow(ax, ay, az), ax, ay);
-    }
-
     //start game function
     function startGame () {
         //day = 4;
-        enableDeviceMotion();
-        gameActive = true;
-        motionReady = true;
-        lastMotionAt = 0;
         //initialise sounds
         blop = new sound('sfx/fish.mp3');
         rareBlop = new sound('sfx/rare-fish.mp3');
@@ -618,17 +314,17 @@ window.onload = function() {
             //right side
             else {
                 if (!item.classList.contains("jellyfish")){
-                leftPos = Math.floor(Math.random() * ((clickContainer.offsetWidth/4)-100)+(clickContainer.offsetWidth/4*3));
+                    leftPos = Math.floor(Math.random() * ((clickContainer.offsetWidth/4)-100)+(clickContainer.offsetWidth/4*3));
                 }
                 else {
                     leftPos = Math.floor(Math.random() * ((clickContainer.offsetWidth/2)-100)+(clickContainer.offsetWidth/2));
                 }
                 setInterval(function(){
                     if (item.classList.contains("fish")) {
-                       leftPos-=45;
+                        leftPos-=45;
                     }
                     else if (item.classList.contains("rare-fish")){
-                       leftPos-=65;
+                        leftPos-=65;
                     }
                     else if (item.classList.contains("jellyfish")){
                         leftPos-=5;
@@ -716,7 +412,6 @@ window.onload = function() {
         }
     }
     function endDay(died) {
-        gameActive = false;
         bgm.stop();
         clearInterval(gameTimerInterval);
         clearInterval(createFishInterval);
@@ -762,18 +457,18 @@ window.onload = function() {
         return Math.random()*end+start;
     };
     var bubbleNumber = 0,
-    generateBubble = function(){
-        if(bubbleNumber < 20){
-            var bubble = document.createElement('div');
-            var size = randomN(5, 10);
-            bubble.setAttribute('style','width: '+size+'px; height: '+size+'px; left:'+randomN(1, bubbles.offsetWidth-(size+4) )+'px;');
-            bubbles.appendChild(bubble);
-            bubbleNumber++;
-        }
-        else {
-          clearInterval(bubbleInterval);
-        }
-    };
+        generateBubble = function(){
+            if(bubbleNumber < 20){
+                var bubble = document.createElement('div');
+                var size = randomN(5, 10);
+                bubble.setAttribute('style','width: '+size+'px; height: '+size+'px; left:'+randomN(1, bubbles.offsetWidth-(size+4) )+'px;');
+                bubbles.appendChild(bubble);
+                bubbleNumber++;
+            }
+            else {
+                clearInterval(bubbleInterval);
+            }
+        };
     generateBubble();
     var bubbleInterval = setInterval(generateBubble, 500);
 
