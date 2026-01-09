@@ -63,6 +63,11 @@ h2 {
 	font-size: 21px;
 	display:block;
 }
+#bomb-result {
+	margin-top: 6px;
+	font-size: 18px;
+	display: block;
+}
 #game-goal {
 	display: none;
 	font-size: 32px;

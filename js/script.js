@@ -13,6 +13,7 @@ window.onload = function() {
     const gameTimer = document.querySelector("#game-timer");
     const gameTimerGauge = document.querySelector(".timer-gauge");
     const gameScore = document.querySelector("#game-score");
+    const bombResult = document.querySelector("#bomb-result");
     var mousePosition = {
         x:0,
         y:0
@@ -114,6 +115,12 @@ window.onload = function() {
         }
         this.stop = function(){
             this.sound.pause();
+        }
+    }
+
+    function setBombResult (label) {
+        if (bombResult) {
+            bombResult.textContent = "Bomb: " + label;
         }
     }
 
@@ -220,6 +227,7 @@ window.onload = function() {
         var sizeLabel = classifyBomb(ax);
         var radius = bombRadii[sizeLabel] || bombRadii.medium;
         var rod = getRodPosition();
+        setBombResult(sizeLabel);
         detonateBomb(rod.containerX, rod.containerY, rod.clientX, rod.clientY, radius, sizeLabel);
     }
 
@@ -247,6 +255,7 @@ window.onload = function() {
         //day = 4;
         enableDeviceMotion();
         gameActive = true;
+        setBombResult("-");
         //initialise sounds
         blop = new sound('sfx/fish.mp3');
         rareBlop = new sound('sfx/rare-fish.mp3');
