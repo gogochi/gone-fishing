@@ -13,6 +13,9 @@ window.onload = function() {
     const gameTimer = document.querySelector("#game-timer");
     const gameTimerGauge = document.querySelector(".timer-gauge");
     const gameScore = document.querySelector("#game-score");
+    const motionBtn = document.querySelector("#motion-btn");
+    const motionStatus = document.querySelector("#motion-status");
+    const motionResult = document.querySelector("#motion-result");
     var mousePosition = {
         x:0,
         y:0
@@ -30,6 +33,14 @@ window.onload = function() {
         small: [0.25, 0.45],
         medium: [0.45, 0.7],
         large: [0.7, 0.9]
+    };
+    var motionRecording = false;
+    var motionSampleCount = 0;
+    var motionSampleSums = {
+        ax: 0,
+        ay: 0,
+        az: 0,
+        atotal: 0
     };
     var gameTimerInterval = null;
     var day = 0;
@@ -77,6 +88,9 @@ window.onload = function() {
     //event listeners
     startBtn.addEventListener("click", startGame);
     clickContainer.addEventListener("mousemove", checkCursor);
+    if (motionBtn) {
+        motionBtn.addEventListener("click", toggleMotionRecord);
+    }
 
     function setLinePosition (clientX, clientY){
         //update cursor co ordinates
@@ -106,23 +120,121 @@ window.onload = function() {
         }
     }
 
+    function setMotionStatus (text) {
+        if (motionStatus) {
+            motionStatus.textContent = text;
+        }
+    }
+
+    function setMotionButtonText (text) {
+        if (motionBtn) {
+            motionBtn.textContent = text;
+        }
+    }
+
+    function formatMotionValue (value) {
+        if (!Number.isFinite(value)) {
+            return "-";
+        }
+        return value.toFixed(3);
+    }
+
+    function renderMotionResult (avgAx, avgAy, avgAz, avgTotal, label) {
+        if (!motionResult) {
+            return;
+        }
+        motionResult.textContent = "Avg ax: " + formatMotionValue(avgAx)
+            + " | Avg ay: " + formatMotionValue(avgAy)
+            + " | Avg az: " + formatMotionValue(avgAz)
+            + " | Avg atotal: " + formatMotionValue(avgTotal)
+            + " | Label: " + (label || "-");
+    }
+
+    function resetMotionSamples () {
+        motionSampleCount = 0;
+        motionSampleSums.ax = 0;
+        motionSampleSums.ay = 0;
+        motionSampleSums.az = 0;
+        motionSampleSums.atotal = 0;
+    }
+
+    function handleMotionPermissionDenied () {
+        motionEnabled = false;
+        if (motionRecording) {
+            motionRecording = false;
+            setMotionButtonText("Start recording");
+        }
+        setMotionStatus("Motion permission denied.");
+        renderMotionResult(NaN, NaN, NaN, NaN, "-");
+    }
+
+    function toggleMotionRecord () {
+        if (motionRecording) {
+            stopMotionRecord();
+        }
+        else {
+            startMotionRecord();
+        }
+    }
+
+    function startMotionRecord () {
+        resetMotionSamples();
+        motionRecording = true;
+        setMotionButtonText("Stop recording");
+        setMotionStatus("Recording... tap again to stop.");
+        renderMotionResult(NaN, NaN, NaN, NaN, "-");
+        enableDeviceMotion();
+        if (!motionAttached && typeof DeviceMotionEvent === "undefined") {
+            motionRecording = false;
+            setMotionButtonText("Start recording");
+            setMotionStatus("Device motion not supported.");
+        }
+    }
+
+    function stopMotionRecord () {
+        motionRecording = false;
+        setMotionButtonText("Start recording");
+        if (motionSampleCount === 0) {
+            setMotionStatus("No samples captured.");
+            renderMotionResult(NaN, NaN, NaN, NaN, "-");
+            return;
+        }
+        var avgAx = motionSampleSums.ax / motionSampleCount;
+        var avgAy = motionSampleSums.ay / motionSampleCount;
+        var avgAz = motionSampleSums.az / motionSampleCount;
+        var avgAtotal = motionSampleSums.atotal / motionSampleCount;
+        var label = classifyThrow(avgAx, avgAy, avgAz, avgAtotal);
+        setMotionStatus("Recording stopped.");
+        renderMotionResult(avgAx, avgAy, avgAz, avgAtotal, label);
+    }
+
     function enableDeviceMotion () {
         if (motionAttached) {
             motionEnabled = true;
+            setMotionStatus("Motion ready.");
             return;
         }
         if (typeof DeviceMotionEvent === "undefined") {
+            setMotionStatus("Device motion not supported.");
             return;
         }
         if (typeof DeviceMotionEvent.requestPermission === "function") {
+            setMotionStatus("Requesting motion permission...");
             DeviceMotionEvent.requestPermission().then(function(result){
                 if (result === "granted") {
                     attachDeviceMotion();
+                    setMotionStatus("Motion ready.");
                 }
-            }).catch(function() {});
+                else {
+                    handleMotionPermissionDenied();
+                }
+            }).catch(function() {
+                handleMotionPermissionDenied();
+            });
         }
         else {
             attachDeviceMotion();
+            setMotionStatus("Motion ready.");
         }
     }
 
@@ -161,8 +273,10 @@ window.onload = function() {
         return { x: ax, y: ay, z: az };
     }
 
-    function classifyThrow (ax, ay, az) {
-        var atotal = Math.sqrt(ax * ax + ay * ay + az * az);
+    function classifyThrow (ax, ay, az, atotalOverride) {
+        var atotal = Number.isFinite(atotalOverride)
+            ? atotalOverride
+            : Math.sqrt(ax * ax + ay * ay + az * az);
         if (atotal > 4.620) {
             if (az > 2.704) {
                 return "large";
@@ -191,6 +305,18 @@ window.onload = function() {
             return "small";
         }
         return "small";
+    }
+
+    function addMotionSample (accel) {
+        var ax = accel.x;
+        var ay = accel.y;
+        var az = accel.z;
+        var atotal = Math.sqrt(ax * ax + ay * ay + az * az);
+        motionSampleSums.ax += ax;
+        motionSampleSums.ay += ay;
+        motionSampleSums.az += az;
+        motionSampleSums.atotal += atotal;
+        motionSampleCount++;
     }
 
     function castRod (strength, ax, ay) {
@@ -229,11 +355,17 @@ window.onload = function() {
     }
 
     function handleDeviceMotion (event) {
-        if (!gameActive || !motionEnabled) {
+        if (!motionEnabled) {
             return;
         }
         var accel = getLinearAcceleration(event);
         if (!accel) {
+            return;
+        }
+        if (motionRecording) {
+            addMotionSample(accel);
+        }
+        if (!gameActive) {
             return;
         }
         var ax = accel.x;
