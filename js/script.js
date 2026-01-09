@@ -17,6 +17,19 @@ window.onload = function() {
         x:0,
         y:0
     }
+    var gameActive = false;
+    var motionEnabled = false;
+    var motionAttached = false;
+    var lastBombAt = 0;
+    var bombCooldownMs = 900;
+    var bombMinAccel = 0.6;
+    var gravityX = 0;
+    var gravityAlpha = 0.8;
+    var bombRadii = {
+        small: 60,
+        medium: 110,
+        large: 160
+    };
     var gameTimerInterval = null;
     var day = 0;
     var score = 0;
@@ -63,12 +76,28 @@ window.onload = function() {
     //event listeners
     startBtn.addEventListener("click", startGame);
     clickContainer.addEventListener("mousemove", checkCursor);
+    clickContainer.addEventListener("touchstart", checkTouch, { passive: true });
+    clickContainer.addEventListener("touchmove", checkTouch, { passive: false });
 
     function checkCursor (event){
         //update cursor co ordinates
         mousePosition.x = event.clientX;
         mousePosition.y = event.clientY;
         //set fishing line to follow cursor
+        fishingLine.style.left= mousePosition.x+"px";
+        fishingLine.style.top = mousePosition.y+"px";
+    }
+
+    function checkTouch (event){
+        if (!event.touches || event.touches.length === 0) {
+            return;
+        }
+        if (event.cancelable) {
+            event.preventDefault();
+        }
+        var touch = event.touches[0];
+        mousePosition.x = touch.clientX;
+        mousePosition.y = touch.clientY;
         fishingLine.style.left= mousePosition.x+"px";
         fishingLine.style.top = mousePosition.y+"px";
     }
@@ -88,9 +117,136 @@ window.onload = function() {
         }
     }
 
+    function enableDeviceMotion () {
+        if (motionAttached) {
+            motionEnabled = true;
+            return;
+        }
+        if (typeof DeviceMotionEvent === "undefined") {
+            return;
+        }
+        if (typeof DeviceMotionEvent.requestPermission === "function") {
+            DeviceMotionEvent.requestPermission().then(function(result){
+                if (result === "granted") {
+                    attachDeviceMotion();
+                }
+            }).catch(function() {});
+        }
+        else {
+            attachDeviceMotion();
+        }
+    }
+
+    function attachDeviceMotion () {
+        if (motionAttached) {
+            return;
+        }
+        motionAttached = true;
+        motionEnabled = true;
+        window.addEventListener("devicemotion", handleDeviceMotion);
+    }
+
+    function getAccelerationX (event) {
+        if (event.acceleration && event.acceleration.x != null) {
+            return event.acceleration.x;
+        }
+        if (event.accelerationIncludingGravity && event.accelerationIncludingGravity.x != null) {
+            var rawX = event.accelerationIncludingGravity.x;
+            gravityX = gravityAlpha * gravityX + (1 - gravityAlpha) * rawX;
+            return rawX - gravityX;
+        }
+        return null;
+    }
+
+    function classifyBomb (ax) {
+        if (ax > -4.389) {
+            if (ax > -1.773) {
+                return "small";
+            }
+            return "medium";
+        }
+        return "large";
+    }
+
+    function getRodPosition () {
+        var rect = clickContainer.getBoundingClientRect();
+        var clientX = mousePosition.x;
+        var clientY = mousePosition.y;
+        if (!clientX && !clientY) {
+            clientX = rect.left + rect.width / 2;
+            clientY = rect.top + rect.height / 2;
+        }
+        return {
+            clientX: clientX,
+            clientY: clientY,
+            containerX: clientX - rect.left,
+            containerY: clientY - rect.top
+        };
+    }
+
+    function detonateBomb (centerX, centerY, clientX, clientY, radius, sizeLabel) {
+        var bomb = document.createElement("div");
+        bomb.classList.add("bomb");
+        bomb.classList.add("bomb-" + sizeLabel);
+        bomb.style.width = (radius * 2) + "px";
+        bomb.style.height = (radius * 2) + "px";
+        bomb.style.left = centerX + "px";
+        bomb.style.top = centerY + "px";
+        clickContainer.appendChild(bomb);
+        setTimeout(function() {
+            if (clickContainer.contains(bomb)) {
+                clickContainer.removeChild(bomb);
+            }
+        }, 500);
+
+        var items = clickContainer.querySelectorAll(".item");
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+            if (item.classList.contains("caught")) {
+                continue;
+            }
+            var rect = item.getBoundingClientRect();
+            var itemX = rect.left + rect.width / 2;
+            var itemY = rect.top + rect.height / 2;
+            var dx = itemX - clientX;
+            var dy = itemY - clientY;
+            if ((dx * dx + dy * dy) <= radius * radius) {
+                hit.call(item, { target: item });
+            }
+        }
+    }
+
+    function triggerBomb (ax) {
+        var sizeLabel = classifyBomb(ax);
+        var radius = bombRadii[sizeLabel] || bombRadii.medium;
+        var rod = getRodPosition();
+        detonateBomb(rod.containerX, rod.containerY, rod.clientX, rod.clientY, radius, sizeLabel);
+    }
+
+    function handleDeviceMotion (event) {
+        if (!motionEnabled || !gameActive) {
+            return;
+        }
+        var ax = getAccelerationX(event);
+        if (!Number.isFinite(ax)) {
+            return;
+        }
+        if (Math.abs(ax) < bombMinAccel) {
+            return;
+        }
+        var now = Date.now();
+        if (now - lastBombAt < bombCooldownMs) {
+            return;
+        }
+        lastBombAt = now;
+        triggerBomb(ax);
+    }
+
     //start game function
     function startGame () {
         //day = 4;
+        enableDeviceMotion();
+        gameActive = true;
         //initialise sounds
         blop = new sound('sfx/fish.mp3');
         rareBlop = new sound('sfx/rare-fish.mp3');
@@ -412,6 +568,7 @@ window.onload = function() {
         }
     }
     function endDay(died) {
+        gameActive = false;
         bgm.stop();
         clearInterval(gameTimerInterval);
         clearInterval(createFishInterval);
