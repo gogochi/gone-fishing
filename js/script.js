@@ -17,6 +17,20 @@ window.onload = function() {
         x:0,
         y:0
     }
+    var gameActive = false;
+    var motionEnabled = false;
+    var motionAttached = false;
+    var motionReady = true;
+    var lastMotionAt = 0;
+    var motionCooldownMs = 700;
+    var motionMinAccel = 1.2;
+    var gravity = { x: 0, y: 0, z: 0 };
+    var gravityAlpha = 0.8;
+    var castBands = {
+        small: [0.25, 0.45],
+        medium: [0.45, 0.7],
+        large: [0.7, 0.9]
+    };
     var gameTimerInterval = null;
     var day = 0;
     var score = 0;
@@ -64,13 +78,17 @@ window.onload = function() {
     startBtn.addEventListener("click", startGame);
     clickContainer.addEventListener("mousemove", checkCursor);
 
-    function checkCursor (event){
+    function setLinePosition (clientX, clientY){
         //update cursor co ordinates
-        mousePosition.x = event.clientX;
-        mousePosition.y = event.clientY;
+        mousePosition.x = clientX;
+        mousePosition.y = clientY;
         //set fishing line to follow cursor
         fishingLine.style.left= mousePosition.x+"px";
         fishingLine.style.top = mousePosition.y+"px";
+    }
+
+    function checkCursor (event){
+        setLinePosition(event.clientX, event.clientY);
     }
     //create audio element for playing music and sfx
     function sound(src) {
@@ -88,9 +106,163 @@ window.onload = function() {
         }
     }
 
+    function enableDeviceMotion () {
+        if (motionAttached) {
+            motionEnabled = true;
+            return;
+        }
+        if (typeof DeviceMotionEvent === "undefined") {
+            return;
+        }
+        if (typeof DeviceMotionEvent.requestPermission === "function") {
+            DeviceMotionEvent.requestPermission().then(function(result){
+                if (result === "granted") {
+                    attachDeviceMotion();
+                }
+            }).catch(function() {});
+        }
+        else {
+            attachDeviceMotion();
+        }
+    }
+
+    function attachDeviceMotion () {
+        if (motionAttached) {
+            return;
+        }
+        motionAttached = true;
+        motionEnabled = true;
+        window.addEventListener("devicemotion", handleDeviceMotion);
+    }
+
+    function getLinearAcceleration (event) {
+        var ax = null;
+        var ay = null;
+        var az = null;
+        if (event.acceleration && event.acceleration.x != null) {
+            ax = event.acceleration.x;
+            ay = event.acceleration.y;
+            az = event.acceleration.z;
+        }
+        else if (event.accelerationIncludingGravity && event.accelerationIncludingGravity.x != null) {
+            var rawX = event.accelerationIncludingGravity.x;
+            var rawY = event.accelerationIncludingGravity.y;
+            var rawZ = event.accelerationIncludingGravity.z;
+            gravity.x = gravityAlpha * gravity.x + (1 - gravityAlpha) * rawX;
+            gravity.y = gravityAlpha * gravity.y + (1 - gravityAlpha) * rawY;
+            gravity.z = gravityAlpha * gravity.z + (1 - gravityAlpha) * rawZ;
+            ax = rawX - gravity.x;
+            ay = rawY - gravity.y;
+            az = rawZ - gravity.z;
+        }
+        if (!Number.isFinite(ax) || !Number.isFinite(ay) || !Number.isFinite(az)) {
+            return null;
+        }
+        return { x: ax, y: ay, z: az };
+    }
+
+    function classifyThrow (ax, ay, az) {
+        var atotal = Math.sqrt(ax * ax + ay * ay + az * az);
+        if (atotal > 4.620) {
+            if (az > 2.704) {
+                return "large";
+            }
+            if (ax > 2.974) {
+                return "large";
+            }
+            if (ay > -5.890) {
+                return "medium";
+            }
+            return "large";
+        }
+        if (ax > -0.009) {
+            if (atotal > 1.250) {
+                if (ax > 1.411) {
+                    return "small";
+                }
+                if (ax > 0.096) {
+                    return "medium";
+                }
+                return "large";
+            }
+            if (atotal > 1.097) {
+                return "medium";
+            }
+            return "small";
+        }
+        return "small";
+    }
+
+    function castRod (strength, ax, ay) {
+        var rect = clickContainer.getBoundingClientRect();
+        var band = castBands[strength] || castBands.medium;
+        var minY = rect.top + rect.height * band[0];
+        var maxY = rect.top + rect.height * band[1];
+        var targetY = minY + Math.random() * (maxY - minY);
+
+        var centerX = rect.left + rect.width / 2;
+        var maxOffset = rect.width * 0.45;
+        var maxAxis = 6;
+        var offsetRatio = 0;
+        if (Number.isFinite(ax)) {
+            var clampedAx = Math.max(-maxAxis, Math.min(maxAxis, ax));
+            offsetRatio = clampedAx / maxAxis;
+        }
+        else {
+            offsetRatio = (Math.random() * 2) - 1;
+        }
+        var targetX = centerX + offsetRatio * maxOffset;
+
+        setLinePosition(targetX, targetY);
+        hitAtPosition(targetX, targetY);
+    }
+
+    function hitAtPosition (clientX, clientY) {
+        var items = clickContainer.querySelectorAll(".item");
+        for (var i = 0; i < items.length; i++) {
+            var rect = items[i].getBoundingClientRect();
+            if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
+                hit.call(items[i], { target: items[i] });
+                break;
+            }
+        }
+    }
+
+    function handleDeviceMotion (event) {
+        if (!gameActive || !motionEnabled) {
+            return;
+        }
+        var accel = getLinearAcceleration(event);
+        if (!accel) {
+            return;
+        }
+        var ax = accel.x;
+        var ay = accel.y;
+        var az = accel.z;
+        var atotal = Math.sqrt(ax * ax + ay * ay + az * az);
+
+        if (atotal < motionMinAccel) {
+            motionReady = true;
+            return;
+        }
+        if (!motionReady) {
+            return;
+        }
+        if (Date.now() - lastMotionAt < motionCooldownMs) {
+            return;
+        }
+        motionReady = false;
+        lastMotionAt = Date.now();
+        castRod(classifyThrow(ax, ay, az), ax, ay);
+    }
+
     //start game function
     function startGame () {
         //day = 4;
+        enableDeviceMotion();
+        gameActive = true;
+        motionReady = true;
+        lastMotionAt = 0;
         //initialise sounds
         blop = new sound('sfx/fish.mp3');
         rareBlop = new sound('sfx/rare-fish.mp3');
@@ -412,6 +584,7 @@ window.onload = function() {
         }
     }
     function endDay(died) {
+        gameActive = false;
         bgm.stop();
         clearInterval(gameTimerInterval);
         clearInterval(createFishInterval);
